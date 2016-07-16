@@ -1,0 +1,84 @@
+.grid {
+    position: relative;
+}
+
+.block {
+    border: 1px solid #FFF;
+    border-radius: 6px;
+    box-sizing: border-box;
+    position: absolute;
+    height: 50px;
+    overflow: hidden;
+    transition: background-color 0.2s ease, border-width 0.2s ease, border-radius 0.2s ease;
+    width: 50px;
+}
+
+.block:hover,
+.block:focus {
+    border-width: 6px;
+    border-radius: 9px;
+}
+// Make dynamic
+.block[data-x='1'] {
+    left: 0;
+}
+
+.block[data-x='2'] {
+    left: 50px;
+}
+
+.block[data-x='3'] {
+    left: 100px;
+}
+
+.block[data-x='4'] {
+    left: 150px;
+}
+
+.block[data-x='5'] {
+    left: 200px;
+}
+
+.block[data-y='1'] {
+    top: 0;
+}
+
+.block[data-y='2'] {
+    top: 50px;
+}
+
+.block[data-y='3'] {
+    top: 100px;
+}
+
+.block[data-y='4'] {
+    top: 150px;
+}
+
+.block[data-y='5'] {
+    top: 200px;
+}
+
+.block.purple {
+    background: #551A8B;
+}
+
+.block.blue {
+    background: #1414fd;
+}
+
+.block.green {
+    background: #148f14;
+}
+
+.block.red {
+    background: #ec1414;
+}
+
+.block.yellow {
+    background: #fbf314;
+}
+
+.block.orange {
+    background: #FFA500;
+}
