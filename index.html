@@ -16,56 +16,38 @@
 <body>
   <div id="container"></div>
   <script type="text/babel">
-    /*
-     * Grid
-     * 
-     * TODO 
-     */
     var Grid = React.createClass({
       
       /*
-       * TODO Check necessity
-       */
-      componentDidMount: function () {
-      },
-      
-      /*
-       * TODO Move duplicate code to single function
-       * TODO Return array with Block references instead of dimensional descriptions
+       * Get block's neighbor blocks by calculating coordinates
        */
       getBlockNeighbors: function (block) {
         var neighbors = [];
         
         // Get top neighbor
-        // TODO Create function getRefByCoords
         if (block.props.y > 1) {
-          var neighborRef = 'block-' + block.props.x + '-' + (block.props.y - 1);
+          var neighborRef = this.getBlockRef(block.props.x, block.props.y - 1);
           
           neighbors.push(neighborRef);
-          //console.log('yolo' + refje);
-          //console.log('...' + this.refs[refje].props.x);
-          
-          //neighbors.push('Block(' + block.props.x + "×" + (block.props.y - 1) + ')');
         }
         
         // Get right neighbor
         if (block.props.x < this.props.width) {
-          var neighborRef = 'block-' + (block.props.x + 1) + '-' + block.props.y;
+          var neighborRef = this.getBlockRef(block.props.x + 1, block.props.y);
           
           neighbors.push(neighborRef);
         }
         
         // Get bottom neighbor
         if (block.props.y < this.props.height) {
-          var neighborRef = 'block-' + block.props.x + '-' + (block.props.y + 1);
+          var neighborRef = this.getBlockRef(block.props.x, block.props.y + 1);
           
           neighbors.push(neighborRef);
-          //neighbors.push('Block(' + block.props.x + "×" + (block.props.y + 1) + ')');
         }
         
         // Get left neighbor
         if (block.props.x > 1) {
-          var neighborRef = 'block-' + (block.props.x - 1) + '-' + block.props.y;
+          var neighborRef = this.getBlockRef(block.props.x - 1, block.props.y);
           
           neighbors.push(neighborRef);
         }
@@ -73,55 +55,61 @@
         return neighbors;
       },
       
+      /* Get (string) ref to child Block with given coordinates
+       * 
+       * Note: As string refs are considered legacy, they should be replaced
+       * with callback refs at some point.
+       */
+      getBlockRef: function (x, y) {
+        var ref = 'block-' + x + '-' + y;
+        
+        return ref;
+      },
+      
       /*
-       * TODO Consider swapping setTimeout with an animation-dependent function
+       * Handle 'change' trigger of child Block
        */
       handleBlockChange: function (block) {
         var neighbors = this.getBlockNeighbors(block);
         
         for (var i = 0; i < neighbors.length; i++) {
-          var delay;
+          var timeout;
           
-          delay = window.setTimeout(this.triggerBlockChange, 200, neighbors[i]);
+          timeout = window.setTimeout(this.triggerBlock, this.props.delay, neighbors[i]);
         }
       },
       
       /*
-       * TODO Actually trigger Block
+       * Trigger child Block
        */
-      triggerBlockChange: function (blockRef) {
-        console.log('Now triggering ' + blockRef);
-        //console.log('But! ' + React.findDOMNode(this.refs[blockRef]).props.x);
-        //React.findDOMNode(this.refs[blockRef]).change();
-        this.refs[blockRef].change();
+      triggerBlock: function (blockRef) {
+        this.refs[blockRef].handleTrigger();
       },
       
-      /*
-       * TODO Directly declare this.handleBlockChange in return
-       * TODO Clean up return
-       */
       render: function () {
+        var divStyle = {
+          width: (50 * this.props.width) + 'px',
+          height: (50 * this.props.height) + 'px'
+        }
+        var grid = this;
         var points = [];
         
+        // Create array of Block position coordinates
         for (var i = 1; i <= this.props.height; i++) {
           for (var j = 1; j <= this.props.width; j++) {
             points.push({x:j, y:i});
           }
         }
-            
-            var test = this.handleBlockChange;
         
-        return (
-          <div className="grid">
+        return (<div className="grid" style={divStyle}>
             {points.map(function (block, i) {
-              var ref = 'block-' + block.x + '-' + block.y;
-              
               return (<Block
                 x={block.x}
                 y={block.y}
-                ref={ref}
+                ref={grid.getBlockRef(block.x, block.y)}
                 key={i}
-                alertGrid={test} />);
+                delay={grid.props.delay}
+                alertGrid={grid.handleBlockChange} />);
               })
             }
           </div>
@@ -129,9 +117,6 @@
       }
     });
     
-    /*
-     * TODO ...
-     */
     var Block = React.createClass({
       
       getInitialState: function () {
@@ -142,26 +127,13 @@
       },
       
       /*
-       * TODO Check necessity
+       * Get random color
        */
-      componentDidMount: function () {
-      },
-      
-      change: function () {
-        // if not on cooldown
-        this.setState({
-            color: this.getNewColor(this.state.color),
-            onCooldown: true // met timer of bij eerstvolgende trigger
-        });
-            
-        this.props.alertGrid(this);
-        // else 
-      },
-      
       getNewColor: function (oldColor) {
         var colors = ['red', 'blue', 'yellow', 'purple', 'orange', 'green'];
         var newColor = null;
         
+        // Make sure output differs from passed color (if any)
         while (newColor == null || newColor == oldColor) {
           var index = Math.floor(Math.random() * colors.length);
           
@@ -172,23 +144,52 @@
       },
       
       handleClick: function () {
-        this.change();
+        this.handleTrigger();
+      },
+      
+      handleTrigger: function () {
+        // Only trigger 'change' if Block is not on cooldown
+        if (!this.state.onCooldown) {
+          var delay = Number(this.props.delay) + 300;
+          var timeout;
+          
+          this.setState({
+            color: this.getNewColor(this.state.color),
+            onCooldown: true
+          });
+          
+          this.props.alertGrid(this);
+          
+          // Remove cooldown with a delay which is longer than its longer than
+          // its parent's delay prop, to avoid this Block from being triggered
+          // by the neighbors it triggered itself.
+          timeout = window.setTimeout(this.removeCooldown, delay);
+        }
+      },
+      
+      removeCooldown: function () {
+        this.setState({
+          onCooldown: false
+        });
       },
       
       render: function () {
         var className = 'block ' + this.state.color;
+        var divStyle = {
+          left: (50 * (this.props.x - 1)) + 'px',
+          top: (50 * (this.props.y - 1)) + 'px'
+        }
         
         return (<div
           className={className}
-          data-x={this.props.x}
-          data-y={this.props.y}
+          style={divStyle}
           onClick={this.handleClick} />
         );
       }
     });
     
     ReactDOM.render(
-      <Grid width="5" height="5" />,
+      <Grid width="12" height="12" delay="100" />,
       document.getElementById('container')
     );
   </script>
